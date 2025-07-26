@@ -8,6 +8,7 @@
 #include "ort_genai_c.h"
 #include "generators.h"
 #include "models/model.h"
+#include "models/diffusion_model.h"
 #include "constrained_logits_processor.h"
 #include "runtime_settings.h"
 #include "search.h"
@@ -57,6 +58,7 @@ struct OgaStringArray : std::vector<std::string>, OgaAbstract {};
 struct OgaTensor : Generators::Tensor, OgaAbstract {};
 struct OgaTokenizer : Generators::Tokenizer, OgaAbstract {};
 struct OgaTokenizerStream : Generators::TokenizerStream, OgaAbstract {};
+struct OgaImageGeneratorParams : Generators::ImageGeneratorParams, OgaAbstract {};
 
 // Helper function to return a shared pointer as a raw pointer. It won't compile if the types are wrong.
 // Exposed types that are internally owned by shared_ptrs inherit from ExternalRefCounted. Then we
@@ -870,6 +872,47 @@ OgaResult* OgaSetActiveAdapter(OgaGenerator* generator, OgaAdapters* adapters, c
   OGA_CATCH
 }
 
+OgaResult* OGA_API_CALL OgaCreateImageGeneratorParams(const OgaModel* model, OgaImageGeneratorParams** out) {
+  OGA_TRY
+  auto params = std::make_shared<Generators::ImageGeneratorParams>(*model);
+  *out = ReturnShared<OgaImageGeneratorParams>(params);
+  return nullptr;
+  OGA_CATCH
+}
+
+OgaResult* OGA_API_CALL OgaImageGeneratorParamsSetPrompts(OgaImageGeneratorParams* image_generation_params, const char** prompt, const char** negative_prompt, size_t prompt_count) {
+  OGA_TRY
+  for (size_t i = 0; i < prompt_count; i++) {
+    if (prompt[i] == nullptr) {
+      image_generation_params->prompts.emplace_back();
+    } else {
+      image_generation_params->prompts.emplace_back(prompt[i]);
+    }
+    if (negative_prompt[i] == nullptr) {
+      image_generation_params->negative_prompts.emplace_back();
+    } else {
+      image_generation_params->negative_prompts.emplace_back(negative_prompt[i]);
+    }
+  }
+  return nullptr;
+  OGA_CATCH
+}
+
+OgaResult* OGA_API_CALL OgaGenerateImage(const OgaModel* model, const OgaImageGeneratorParams* image_generation_params, OgaTensor** out) {
+  OGA_TRY
+  // Unfortunately the current design does not offer a way to avoid using dynamic_cast
+  auto image_generation_model = dynamic_cast<const Generators::DiffusionModel*>((const Generators::Model*)model);
+  if (!image_generation_model) {
+    throw std::runtime_error("model is not an image generation model");
+  }
+
+  auto tensor = std::make_shared<Generators::Tensor>(std::move(image_generation_model->Generate(image_generation_params)));
+  *out = ReturnShared<OgaTensor>(tensor);
+
+  return nullptr;
+  OGA_CATCH
+}
+
 void OGA_API_CALL OgaDestroyStringArray(OgaStringArray* string_array) { delete string_array; }
 void OGA_API_CALL OgaDestroyResult(OgaResult* p) { delete p; }
 void OGA_API_CALL OgaDestroyString(const char* p) { delete p; }
@@ -877,6 +920,7 @@ void OGA_API_CALL OgaDestroySequences(OgaSequences* p) { delete p; }
 void OGA_API_CALL OgaDestroyConfig(OgaConfig* p) { delete p; }
 void OGA_API_CALL OgaDestroyModel(OgaModel* p) { p->ExternalRelease(); }
 void OGA_API_CALL OgaDestroyGeneratorParams(OgaGeneratorParams* p) { p->ExternalRelease(); }
+void OGA_API_CALL OgaDestroyImageGeneratorParams(OgaImageGeneratorParams* p) { p->ExternalRelease(); }
 void OGA_API_CALL OgaDestroyGenerator(OgaGenerator* p) { delete p; }
 void OGA_API_CALL OgaDestroyTokenizer(OgaTokenizer* p) { p->ExternalRelease(); }
 void OGA_API_CALL OgaDestroyTokenizerStream(OgaTokenizerStream* p) { delete p; }

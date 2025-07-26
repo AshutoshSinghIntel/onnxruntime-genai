@@ -61,6 +61,7 @@ typedef enum OgaElementType {
 
 typedef struct OgaResult OgaResult;
 typedef struct OgaGeneratorParams OgaGeneratorParams;
+typedef struct OgaImageGeneratorParams OgaImageGeneratorParams;
 typedef struct OgaGenerator OgaGenerator;
 typedef struct OgaRuntimeSettings OgaRuntimeSettings;
 typedef struct OgaConfig OgaConfig;
@@ -373,6 +374,32 @@ OGA_EXPORT OgaResult* OGA_API_CALL OgaGeneratorParamsTryGraphCaptureWithMaxBatch
  * \return OgaResult containing the error message if the setting of the guidance failed
  */
 OGA_EXPORT OgaResult* OGA_API_CALL OgaGeneratorParamsSetGuidance(OgaGeneratorParams* params, const char* type, const char* data);
+
+/**
+ * \brief Creates a OgaImageGeneratorParams from the given model.
+ * \param[in] model The model to use for generation.
+ * \param[out] out The created image generation params.
+ * \return OgaResult containing the error message if the image generation params creation failed.
+ */
+OGA_EXPORT OgaResult* OGA_API_CALL OgaCreateImageGeneratorParams(const OgaModel* model, OgaImageGeneratorParams** out);
+
+/**
+ * \brief Destroys the given image generation params.
+ * \param[in] image_generation_params The image generation params to be destroyed.
+ */
+OGA_EXPORT void OGA_API_CALL OgaDestroyImageGeneratorParams(OgaImageGeneratorParams* image_generation_params);
+
+/**
+ * \brief Sets the search option for the image generation params.
+ * \param[in] image_generation_params The image generation params to set the search option on.
+ * \param[in] prompt The prompts.
+ * \param[in] negative_prompt The negative prompts.
+ * \param[in] prompt_count The number of prompts.
+ * \return OgaResult containing the error message if the setting of the search option failed.
+ */
+OGA_EXPORT OgaResult* OGA_API_CALL OgaImageGeneratorParamsSetPrompts(OgaImageGeneratorParams* image_generation_params, const char** prompt, const char** negative_prompt, size_t prompt_count);
+
+OGA_EXPORT OgaResult* OGA_API_CALL OgaGenerateImage(const OgaModel* model, const OgaImageGeneratorParams* image_generation_params, OgaTensor** out);
 
 /**
  * \brief Creates a generator from the given model and generator params.
@@ -793,6 +820,9 @@ OGA_EXPORT OgaResult* OGA_API_CALL OgaUnloadAdapter(OgaAdapters* adapters, const
  */
 OGA_EXPORT OgaResult* OGA_API_CALL OgaSetActiveAdapter(OgaGenerator* generator, OgaAdapters* adapters,
                                                        const char* adapter_name);
+
+OGA_EXPORT OgaResult* OGA_API_CALL OgaSelenaTest(const char *prompt, const char* model_path, uint8_t** result);
+
 #ifdef __cplusplus
 }
 #endif
